@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>ไพ่แคง Casino</title>
+    <style>
+        body { background: #134e32; color: white; font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; display: flex; flex-direction: column; height: 100vh;}
+        
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 1000;}
+        .modal-box { background: #2c3e50; padding: 30px; border-radius: 15px; text-align: center; border: 2px solid #f1c40f; color: white; min-width: 320px; max-width: 600px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);}
+        input[type="text"], input[type="number"] { padding: 8px; font-size: 16px; border-radius: 5px; border: none; margin: 5px 0 10px; width: 100%; box-sizing: border-box;}
+        button { padding: 10px 20px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; background: #2ecc71; color: white; transition: 0.2s; font-size: 16px; margin: 5px;}
+        button:hover { filter: brightness(1.1); }
+        button:disabled { opacity: 0.5; background: #95a5a6; cursor: not-allowed; }
+        .btn-danger { background: #e74c3c; }
+
+        .dealer-selector { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 20px; margin-top: 5px; max-height: 240px; overflow-y: auto;}
+        .dealer-card { background: rgba(0,0,0,0.4); border: 2px solid transparent; border-radius: 10px; padding: 10px; cursor: pointer; transition: 0.3s; width: 90px; text-align: center; }
+        .dealer-card:hover { background: rgba(0,0,0,0.7); transform: translateY(-3px); }
+        .dealer-card.selected { border-color: #f1c40f; box-shadow: 0 0 15px rgba(241, 196, 15, 0.6); background: rgba(241, 196, 15, 0.2); transform: scale(1.05);}
+        .dealer-card img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-bottom: 5px; border: 2px solid white; }
+        .dealer-card div { font-size: 12px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+
+        .top-bar { background: rgba(0,0,0,0.8); padding: 10px 30px; display: flex; justify-content: space-between; align-items: center; z-index: 10;}
+        .profile-avatar { width: 35px; height: 35px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; margin-right: 10px; border: 2px solid white; text-transform: uppercase;}
+        
+        .main-container { display: flex; flex: 1; overflow: hidden; }
+        
+        /* Sidebar ซ้าย: Log */
+        .sidebar-left { width: 250px; background: rgba(0,0,0,0.4); padding: 15px; border-right: 2px solid #27ae60; overflow-y: auto; display: flex; flex-direction: column;}
+        .log-box { background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 13px; border-left: 4px solid #f1c40f; color: #ecf0f1;}
+
+        .game-table { flex: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; position: relative;}
+        
+        /* Sidebar ขวา: โฆษณาเต็มแนวตั้ง */
+        .sidebar-right { width: 125px; background: #000; border-left: 2px solid #f1c40f; display: flex; flex-direction: column; overflow: hidden;}
+        .ad-container { width: 100%; height: 100%; position: relative; }
+        /* แอนิเมชันเด้งเบาลง (3px) แต่ถี่ขึ้น (1s) */
+        .ad-container img { width: 100%; height: 100%; object-fit: cover; animation: floatAd 1s ease-in-out infinite; }
+        @keyframes floatAd { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+
+        .opponents-row { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;}
+        .opponent { background: rgba(0,0,0,0.4); padding: 10px; border-radius: 10px; text-align: center; border: 2px solid transparent; width: 120px; position: relative;}
+        .opponent.active { border-color: #f1c40f; box-shadow: 0 0 15px #f1c40f; transform: scale(1.05); }
+        .host-badge { position: absolute; top: -10px; right: -10px; background: #e74c3c; color: white; font-size: 10px; padding: 3px 6px; border-radius: 10px; font-weight: bold;}
+        .score-badge { color: #2ecc71; font-weight: bold; font-size: 14px; margin-bottom: 5px; }
+
+        .timer-badge { background: #e67e22; padding: 2px 8px; border-radius: 10px; font-size: 14px; font-weight: bold; display: inline-block; margin-top: 5px;}
+        .timer-badge.danger { background: #c0392b; animation: blink 1s infinite;}
+        @keyframes blink { 50% { opacity: 0.5; } }
+
+        .center-pile { display: flex; justify-content: center; align-items: center; gap: 40px; margin-top: 10px; }
+        .dealer-display { text-align: center; margin-right: 20px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 10px;}
+        .dealer-display img { width: 60px; height: 60px; border-radius: 50%; border: 2px solid #f1c40f; object-fit: cover;}
+        .deck-zone { text-align: center; }
+        
+        .hand { display: flex; justify-content: center; gap: -20px; min-height: 120px; margin: 15px 0; }
+        .card { width: 70px; height: 100px; background: white; border-radius: 8px; color: black; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: bold; box-shadow: 2px 2px 8px rgba(0,0,0,0.6); user-select: none; border: 1px solid #bdc3c7;}
+        .card.red { color: #e74c3c; }
+        .card-back { width: 70px; height: 100px; background: repeating-linear-gradient(45deg, #2c3e50, #2c3e50 10px, #34495e 10px, #34495e 20px); border: 2px solid white; color: white; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-weight: bold;}
+        .deck-zone.clickable .card-back { cursor: pointer; border-color: #f1c40f; box-shadow: 0 0 15px #f1c40f; }
+
+        .player-area { text-align: center; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 15px; border: 2px solid transparent;}
+        .player-area.active { border-color: #f1c40f; box-shadow: 0 0 15px #f1c40f; }
+        .my-card { cursor: pointer; transition: 0.2s; margin: 0 2px;}
+        .my-card.selected { transform: translateY(-20px); border: 3px solid #f1c40f; }
+
+        .toast { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.5); background: rgba(231, 76, 60, 0.9); color: white; padding: 15px 30px; border-radius: 50px; font-size: 24px; font-weight: bold; opacity: 0; pointer-events: none; z-index: 1000; transition: all 0.3s;}
+        .toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    </style>
+</head>
+<body>
+
+    <div id="login-modal" class="overlay">
+        <div class="modal-box" style="max-width: 400px;">
+            <h1 style="color:gold; margin-top:0;">ไพ่แคง Casino</h1>
+            <input type="text" id="username" placeholder="ตั้งชื่อเล่นของคุณ (EN/TH)">
+            <button onclick="login()" style="width:100%;">เข้าห้อง</button>
+        </div>
+    </div>
+
+    <div id="setup-modal" class="overlay" style="display:none;">
+        <div class="modal-box" style="text-align: left;">
+            <h2 style="color:#f1c40f; margin-top:0; text-align:center;">ตั้งค่าโต๊ะพนัน</h2>
+            
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1;"><label>เงินเริ่ม:</label> <input type="number" id="inp-start-chips" value="1000"></div>
+                <div style="flex:1;"><label>เดิมพัน:</label> <input type="number" id="inp-bet" value="50"></div>
+                <div style="flex:1;"><label>ค่าไหล:</label> <input type="number" id="inp-flow" value="20"></div>
+                <div style="flex:1;"><label>ค่าปรับ:</label> <input type="number" id="inp-pen" value="30"></div>
+            </div>
+            
+            <label style="display:block; margin-top:5px; font-weight:bold; text-align:center;">เลือกผู้แจกไพ่ (Dealer)</label>
+            <div class="dealer-selector">
+                <script>
+                    const names = ["", "AJ. Tee", "AJ. Ton", "AJ. Blinkemon", "SIA NICEZAZA", "SingTohhh", "Illectrician", "TAROzaz", "AshilnwZa"];
+                    for(let i=1; i<=8; i++) {
+                        document.write(`
+                            <div class="dealer-card ${i===7?'selected':''}" id="dc-${i}" onclick="selectDealer(${i}, this)">
+                                <img src="dealer_${i}.png" onerror="this.src='https://ui-avatars.com/api/?name=${i}'">
+                                <div>${names[i]}</div>
+                            </div>
+                        `);
+                    }
+                </script>
+            </div>
+
+            <div style="text-align: center;">
+                <button onclick="submitSetup()" style="width:100%; font-size:18px;">บันทึกการตั้งค่า</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="top-bar">
+        <div style="display:flex; align-items:center;">
+            <div class="profile-avatar" id="my-avatar">?</div>
+            <span id="ui-name" style="font-size: 20px; font-weight:bold;"></span> 
+            <span id="ui-chips" style="margin-left: 10px; color:gold; font-size: 20px; font-weight:bold;"></span>
+        </div>
+        <div style="text-align: center; flex-grow: 1;">
+            <div id="msg" style="font-size: 20px; font-weight:bold; color:#f39c12;">รอการเชื่อมต่อ...</div>
+        </div>
+        <div style="font-size: 20px; font-weight:bold; display:flex; align-items:center;">
+            กองกลาง: <span id="pot-val" style="color:gold; margin-left:5px; margin-right:15px;">0</span>
+            
+            <button onclick="document.getElementById('setup-modal').style.display='flex'" id="setup-btn" style="display:none; background:#3498db; margin-right:5px;">ตั้งค่าเกมหน้า</button>
+            <button onclick="sendAction('start')" id="start-btn" style="display:none;">เริ่มเกม!</button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar-left">
+            <h3 style="color:#f1c40f; margin-top:0; text-align:center;">📜 บันทึกรายตา</h3>
+            <div id="log-container" style="flex:1; overflow-y:auto;"></div>
+        </div>
+
+        <div class="game-table">
+            <div id="opponents" class="opponents-row"></div>
+            
+            <div class="center-pile">
+                <div class="dealer-display">
+                    <img id="dealer-img" src="dealer_7.png" onerror="this.src='https://ui-avatars.com/api/?name=SS&background=34495e&color=fff'">
+                    <div id="dealer-name" style="font-size: 14px; font-weight:bold; margin-top:5px; color:#f1c40f;">Puppies</div>
+                </div>
+
+                <div class="deck-zone" id="draw-pile-zone" onclick="attemptDraw()">
+                    <div style="font-size: 12px; color: #bdc3c7;">กองจั่ว (<span id="deck-val">52</span>)</div>
+                    <div class="card-back"></div>
+                </div>
+                <div class="deck-zone">
+                    <div style="font-size: 12px; color: #bdc3c7;">กองทิ้ง</div>
+                    <div class="card" id="discard-pile">ว่าง</div>
+                </div>
+            </div>
+
+            <div class="player-area" id="my-area">
+                <div id="my-info" style="margin-bottom:5px;">มือของคุณ</div>
+                <div id="my-hand" class="hand"></div>
+                <div class="controls">
+                    <button id="discard-btn" onclick="submitDiscard()" disabled>ทิ้งไพ่</button>
+                    <button id="kaeng-btn" class="btn-danger" onclick="sendAction('kaeng')" disabled>แคง!</button>
+                    <span id="my-timer-display" style="display:none;" class="timer-badge">⏳ <span id="my-time-val">20</span>s</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-right">
+           
+            <div class="ad-container">
+                <img id="ad-image" src="Ad1.png" onerror="this.src='https://via.placeholder.com/200x1000/34495e/f1c40f?text=โฆษณา'">
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-notification" class="toast">ข้อความ</div>
+
+    <script>
+        const API = window.location.origin + "/api"; 
+        let myName = "", selectedIndices = [], gameState = null, lastStateString = "", pollTimer = null;
+        let chosenDealerType = 7; 
+
+        let adIndex = 1;
+        setInterval(() => {
+            adIndex = adIndex >= 4 ? 1 : adIndex + 1;
+            let imgEl = document.getElementById('ad-image');
+            imgEl.src = `Ad${adIndex}.png`;
+            imgEl.onerror = () => { imgEl.src = `https://via.placeholder.com/200x1000/34495e/f1c40f?text=โฆษณา+${adIndex}`; };
+        }, 5000);
+
+        function getColorFromName(name) {
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            let c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+            return '#' + "00000".substring(0, 6 - c.length) + c;
+        }
+
+        function selectDealer(type, element) {
+            chosenDealerType = type;
+            document.querySelectorAll('.dealer-card').forEach(card => card.classList.remove('selected'));
+            element.classList.add('selected');
+        }
+
+        async function login() {
+            let nameInput = document.getElementById('username').value.trim();
+            if(!nameInput) return alert("กรุณาใส่ชื่อ!");
+            myName = nameInput;
+            
+            document.getElementById('ui-name').innerText = myName;
+            let avatar = document.getElementById('my-avatar');
+            avatar.innerText = myName.charAt(0);
+            avatar.style.background = getColorFromName(myName);
+            
+            document.getElementById('login-modal').style.display = "none";
+            
+            await fetch(`${API}/login/${myName}`);
+            pollTimer = setInterval(syncState, 1000); 
+            syncState();
+        }
+
+        async function submitSetup() {
+            let chips = document.getElementById('inp-start-chips').value;
+            let bet = document.getElementById('inp-bet').value;
+            let flow = document.getElementById('inp-flow').value;
+            let pen = document.getElementById('inp-pen').value;
+            await fetch(`${API}/setup_room/${myName}/${chips}/${bet}/${flow}/${pen}/${chosenDealerType}`);
+            document.getElementById('setup-modal').style.display = "none";
+        }
+
+        async function sendAction(act) {
+            try {
+                const res = await fetch(`${API}/${act}/${myName}`);
+                processState(await res.json());
+            } catch (err) {}
+        }
+
+        async function syncState() {
+            try {
+                const res = await fetch(`${API}/state/${myName}`);
+                processState(await res.json());
+            } catch (err) {}
+        }
+
+        function processState(newState) {
+            let me = newState.players.find(p => p.name === myName);
+            if (!me && gameState && gameState.players.find(p => p.name === myName)) {
+                clearInterval(pollTimer);
+                alert("💸 เงินคุณหมดแล้ว! คุณถูกเตะออกจากห้อง กรุณารีเฟรชเพื่อตั้งชื่อใหม่ครับ");
+                window.location.reload();
+                return;
+            }
+
+            let newStateString = JSON.stringify(newState);
+            if (newStateString === lastStateString) return; 
+            
+            if(lastStateString !== "") {
+                if (newState.message.includes("ไหล!") || newState.message.includes("หมดเวลา")) {
+                    showToast(newState.message, newState.message.includes(myName) && !newState.message.includes("หมดเวลา"));
+                }
+                if (newState.status === "game_over" && JSON.parse(lastStateString).status !== "game_over") {
+                    showToast(newState.message, !newState.message.includes("โดนแหก"));
+                }
+            }
+
+            gameState = newState;
+            lastStateString = newStateString;
+            render();
+        }
+
+        function showToast(text, isSuccess = false) {
+            const toast = document.getElementById('toast-notification');
+            toast.innerText = text;
+            toast.className = isSuccess ? "toast success show" : "toast show";
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function attemptDraw() {
+            let myIdx = gameState.players.findIndex(p => p.name === myName);
+            if (gameState.current_turn === myIdx && !gameState.has_drawn && gameState.status === "playing") {
+                sendAction('draw');
+            }
+        }
+
+        async function submitDiscard() {
+            if (selectedIndices.length === 0) return alert("เลือกไพ่ก่อนครับ!");
+            try {
+                const res = await fetch(`${API}/discard/${myName}/${selectedIndices.join(',')}`);
+                selectedIndices = []; 
+                processState(await res.json());
+            } catch (err) {}
+        }
+
+        function toggleCard(idx) {
+            let myIdx = gameState.players.findIndex(p => p.name === myName);
+            if (gameState.current_turn !== myIdx || gameState.status !== "playing") return;
+            
+            let myCards = gameState.players[myIdx].cards;
+            if (selectedIndices.length > 0) {
+                if (myCards[selectedIndices[0]].substring(2) !== myCards[idx].substring(2) && !selectedIndices.includes(idx)) {
+                    return alert("ทิ้งชุดต้องหน้าไพ่เหมือนกันครับ!");
+                }
+            }
+            const i = selectedIndices.indexOf(idx);
+            if (i > -1) selectedIndices.splice(i, 1);
+            else selectedIndices.push(idx);
+            lastStateString = ""; render();
+        }
+
+        function render() {
+            if(!gameState) return;
+            
+            let isHost = (myName === gameState.host);
+            if (!gameState.is_configured && isHost) {
+                document.getElementById('setup-modal').style.display = "flex";
+            } else if (!gameState.is_configured && !isHost) {
+                document.getElementById('msg').innerText = "รอหัวหน้าห้อง (" + gameState.host + ") ตั้งค่าโต๊ะ...";
+            } else {
+                document.getElementById('msg').innerText = gameState.message;
+            }
+
+            document.getElementById('pot-val').innerText = gameState.pot;
+            document.getElementById('deck-val').innerText = gameState.deck_count;
+            
+            // โชว์ปุ่มตั้งค่าและปุ่มเริ่มเกมให้เฉพาะ Host ตอนที่จบเกมหรือกำลังรอ
+            let showControls = (isHost && (gameState.status === "waiting" || gameState.status === "game_over") && gameState.is_configured);
+            document.getElementById('start-btn').style.display = showControls ? "inline-block" : "none";
+            document.getElementById('setup-btn').style.display = showControls ? "inline-block" : "none";
+            
+            const dealerArray = ["", "AJ. Tee", "AJ. Ton", "AJ. Blinkemon", "SIA NICEZAZA", "SingTohhh", "Illectrician", "TAROzaz", "AshilnwZa"];
+            
+            // ดึงค่าให้ครอบคลุม (รองรับทั้ง C++ โค้ดเก่าและโค้ดใหม่)
+            let dt = parseInt(gameState.dealer_id || gameState.dealer_type);
+            if (isNaN(dt) || dt < 1 || dt > 8) dt = 7; // ถ้าค่ารวน ให้กลับไปคนที่ 7
+            
+            // ดึงชื่อ Dealer (ถ้า C++ ส่งมาก็ใช้เลย ถ้าไม่ส่งก็ดึงจาก Array)
+            let dNameStr = gameState.dealer_name || dealerArray[dt] || "Dealer";
+
+            let dImg = document.getElementById('dealer-img');
+            dImg.src = `dealer_${dt}.png`;
+            
+            dImg.onerror = () => { 
+                // ถ้ารูปพัง ให้เอาตัวอักษร 2 ตัวแรกมาทำโปรไฟล์แทน
+                let fallback = dNameStr.substring(0, 2).toUpperCase();
+                dImg.src = `https://ui-avatars.com/api/?name=${fallback}&background=34495e&color=fff`;
+            };
+            
+            document.getElementById('dealer-name').innerText = dNameStr;
+            // ---------------------------------------------------------
+
+            const logContainer = document.getElementById('log-container');
+
+            logContainer.innerHTML = "";
+            // แสดง Log ใหม่สุดอยู่ล่างสุด เพื่อให้อ่านไล่ลงมา
+            gameState.log.forEach(text => { 
+                logContainer.innerHTML += `<div class="log-box">${text}</div>`;
+            });
+            logContainer.scrollTop = logContainer.scrollHeight;
+
+            let topDiscard = gameState.discard_top;
+            let discardDiv = document.getElementById('discard-pile');
+            if(topDiscard) {
+                discardDiv.innerText = topDiscard;
+                discardDiv.className = (topDiscard.includes('💗') || topDiscard.includes('♦️')) ? "card red" : "card";
+            } else { discardDiv.innerText = "ว่าง"; discardDiv.className = "card"; }
+
+            let myIdx = gameState.players.findIndex(p => p.name === myName);
+            let isMyTurn = (gameState.current_turn === myIdx && gameState.status === "playing");
+            
+            document.getElementById('discard-btn').disabled = !isMyTurn;
+            document.getElementById('kaeng-btn').disabled = !(isMyTurn && !gameState.has_drawn);
+            let drawPileZone = document.getElementById('draw-pile-zone');
+            if (isMyTurn && !gameState.has_drawn) drawPileZone.classList.add('clickable');
+            else drawPileZone.classList.remove('clickable');
+
+            let myTimer = document.getElementById('my-timer-display');
+            if (isMyTurn) {
+                myTimer.style.display = "inline-block";
+                document.getElementById('my-time-val').innerText = gameState.time_left;
+                myTimer.className = gameState.time_left <= 5 ? "timer-badge danger" : "timer-badge";
+            } else {
+                myTimer.style.display = "none";
+            }
+
+            const opps = document.getElementById('opponents');
+            opps.innerHTML = "";
+            gameState.players.forEach((p, idx) => {
+                if(p.name === myName) {
+                    document.getElementById('ui-chips').innerText = `💰 ${p.chips}`;
+                    
+                    // โชว์แต้มตัวเองตลอดเวลา
+                    document.getElementById('my-info').innerHTML = `แต้มรวมของคุณ: <b style="font-size:20px; color:#2ecc71;">${p.score}</b>`;
+                    document.getElementById('my-area').className = isMyTurn ? "player-area active" : "player-area";
+                    
+                    const container = document.getElementById('my-hand');
+                    container.innerHTML = "";
+                    p.cards.forEach((c, i) => {
+                        const isSelected = selectedIndices.includes(i);
+                        const isRed = c.includes('💗') || c.includes('♦️');
+                        container.innerHTML += `<div class="card my-card ${isRed ? 'red' : ''} ${isSelected ? 'selected' : ''}" onclick="toggleCard(${i})">${c}</div>`;
+                    });
+                } else {
+                    let activeClass = (gameState.current_turn === idx && gameState.status === "playing") ? "active" : "";
+                    let isOppHost = (p.name === gameState.host) ? `<div class="host-badge">HOST</div>` : "";
+                    let timerHtml = (activeClass) ? `<div class="${gameState.time_left <= 5 ? 'timer-badge danger' : 'timer-badge'}">⏳ ${gameState.time_left}s</div>` : "";
+
+                    // โชว์แต้มคู่แข่งเฉพาะตอนจบเกม
+                    let scoreHtml = (gameState.status === "game_over") ? `<div class="score-badge">แต้ม: ${p.score}</div>` : "";
+
+                    let hiddenHandHtml = `<div class="card-back" style="width:30px;height:45px; margin:0 auto;"></div>`;
+                    if(gameState.status === "game_over") {
+                         hiddenHandHtml = `<div style="display:flex; justify-content:center; gap:2px; flex-wrap:wrap;">` + 
+                             p.cards.map(c => `<div class="card ${c.includes('💗')||c.includes('♦️')?'red':''}" style="width:30px;height:45px;font-size:12px; border:1px solid #ccc;">${c}</div>`).join('') + `</div>`;
+                    }
+                    opps.innerHTML += `
+                        <div class="opponent ${activeClass}">
+                            ${isOppHost}
+                            <div class="profile-avatar" style="background:${getColorFromName(p.name)}; margin: 0 auto 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.5);">${p.name.charAt(0)}</div>
+                            <div style="font-weight:bold; margin-bottom:5px;">${p.name}</div>
+                            ${scoreHtml}
+                            <div style="color:gold; margin-bottom:5px;">💰 ${p.chips}</div>
+                            ${hiddenHandHtml}
+                            <div style="margin-top:5px; font-size:12px; color:#bdc3c7;">${p.action}</div>
+                            ${timerHtml}
+                        </div>`;
+                }
+            });
+        }
+    </script>
+</body>
+</html>
