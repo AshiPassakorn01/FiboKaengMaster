@@ -73,6 +73,6 @@ g++ main.cpp -o main -lws2_32
 * **Data Synchronization:** ใช้ JavaScript `fetch()` เพื่อส่งคำขอแบบ Polling ไปยังเซิร์ฟเวอร์ทุกๆ 1 วินาที เพื่อนำข้อมูลล่าสุดมาอัปเดตหน้าจอผู้เล่น (Real-time UI)
 * **Security & Anti-Cheat:** ระบบส่งข้อมูลจาก Backend จะทำการกรองข้อมูล (Masking) โดยซ่อนข้อมูลหน้าไพ่ของผู้เล่นคนอื่นเป็นคำว่า "คว่ำ" จนกว่าเกมจะจบ เพื่อป้องกันการทุจริตผ่านการตรวจสอบ Network Traffic ของเบราว์เซอร์
 
-# Kaeng master (Here Pup Pha Kaeng)
+## Demo Video (Youtube Link)
 
 `https://youtu.be/tjrcn6_N2zI`
